@@ -1,3 +1,5 @@
-## [0.0.1] - TODO: Add release date.
+## [0.0.1] - Create project and repository
 
-* TODO: Describe initial release.
+## [0.0.2] - Added to pub.dev
+
+## [0.0.3] - Fixed Typo. Added Example.

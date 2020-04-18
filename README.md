@@ -1,14 +1,7 @@
-# login_screen
+# LOGIN_SCREEN
 
-A new Flutter package project.
+This package provides a simple Login Screen Template using parameters
+to customize the screen quickly and to authenticate users.
 
-## Getting Started
-
-This project is a starting point for a Dart
-[package](https://flutter.dev/developing-packages/),
-a library module containing code that can be shared easily across
-multiple Flutter or Dart projects.
-
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.dev/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+This is a VISUAL ONLY widget and all back-end process should be passed
+in it's parameters.
