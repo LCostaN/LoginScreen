@@ -14,7 +14,24 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: LoginScreen(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '\home')
+          return MaterialPageRoute(
+            builder: (context) => Scaffold(
+              body: Center(child: Text("Home")),
+            ),
+          );
+
+        return MaterialPageRoute(
+          builder: (context) => LoginScreen(
+            backgroundColor: Colors.blue.shade600,
+            authenticator: (login, pass) => true,
+            nextRouteName: '\home',
+            rememberOption: false,
+            duration: 1250,
+          ),
+        );
+      },
     );
   }
 }

@@ -1,8 +1,6 @@
 name: example
 description: Example of Login Screen
 
-publish_to: "none"
-
 version: 1.0.0+1
 
 environment:
@@ -12,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  login_screen: ^0.0.2
+  login_screen: ^0.5.0
 
   cupertino_icons: ^0.1.3
 

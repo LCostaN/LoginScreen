@@ -14,20 +14,23 @@ class LoginScreen extends StatefulWidget {
     this.backgroundColor,
     this.cardColor,
     this.background,
-    this.authenticator,
+    @required this.authenticator,
     this.loginValidator,
     this.passwordValidator,
     this.duration,
     this.buttonContent,
-    this.nextRouteName,
+    this.buttonColor,
+    this.buttonTextColor,
+    @required this.nextRouteName,
     this.loginLabelText,
     this.loginHintText,
     this.passwordLabelText,
     this.passwordHintText,
-    this.authenticationErrorMessage,
-    this.passwordErrorMessage,
-    this.loginErrorMessage,
-    this.rememberOption,
+    this.authenticationErrorMessage = "authentication failed.",
+    this.passwordErrorMessage = "password failed.",
+    this.loginErrorMessage = "login failed.",
+    this.asset,
+    this.rememberOption = false,
     this.rememberCallback,
     this.createAccount = false,
     this.accountRouteName,
@@ -70,6 +73,18 @@ class LoginScreen extends StatefulWidget {
   /// [rememberCallback].
   final bool rememberOption;
 
+  /// An Image to show above the login fields.
+  final String asset;
+
+  /// RaisedButton's child. Usually a [Text].
+  final Widget buttonContent;
+
+  /// Login Button Color. Defaults to blue.
+  final Color buttonColor;
+
+  /// Button's textColor. Defaults to white.
+  final Color buttonTextColor;
+
 // Fields' Options
 
   /// Login's field label text
@@ -89,8 +104,6 @@ class LoginScreen extends StatefulWidget {
 
   /// Keyboard type for password field.
   final TextInputType passwordKeyboard;
-
-  final Widget buttonContent;
 
   final String authenticationErrorMessage;
   final String passwordErrorMessage;
@@ -126,8 +139,6 @@ class LoginScreen extends StatefulWidget {
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
-
-  bool get animated => duration != null || duration > 0;
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -149,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _opacity = 0.0;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _opacity = 1.0;
+      setState(() => _opacity = 1.0);
     });
   }
 
@@ -158,75 +169,105 @@ class _LoginScreenState extends State<LoginScreen> {
     showAuthenticationErrorMessage = false;
     showPasswordErrorMessage = false;
     showLoginErrorMessage = false;
+
     return Scaffold(
-      backgroundColor: widget.backgroundColor ??
-              Theme.of(context).scaffoldBackgroundColor ??
-              Theme.of(context).brightness == Brightness.light
-          ? Colors.white
-          : Colors.black87,
+      backgroundColor: widget.backgroundColor,
       body: Stack(
         children: [
-          widget.background ?? Container(),
+          Positioned(
+            top: 0,
+            left: 0,
+            bottom: 0,
+            right: 0,
+            child: widget.background ?? Container(),
+          ),
           Center(
             child: AnimatedOpacity(
-              duration: widget.animated
+              duration: widget.duration != null
                   ? Duration(milliseconds: widget.duration)
                   : Duration.zero,
               opacity: _opacity,
+              curve: Curves.easeIn,
               child: Card(
+                elevation: widget.background != null ? 4.0 : 16.0,
+                margin: const EdgeInsets.all(12.0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16.0),
                 ),
                 color: widget.cardColor,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      keyboardType: widget.loginKeyboard,
-                      decoration: InputDecoration(
-                        icon: Icon(Icons.person),
-                        hintText: widget.loginHintText,
-                        labelText: widget.loginLabelText ?? 'Login',
-                        errorText: showLoginErrorMessage
-                            ? widget.loginErrorMessage ?? ""
-                            : null,
-                      ),
-                      onChanged: (value) => setState(() => login = value),
+                child: Container(
+                  padding: const EdgeInsets.all(16.0),
+                  constraints: BoxConstraints(maxWidth: 550),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        widget.asset != null
+                            ? ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: 216),
+                                child: FittedBox(
+                                  child: Image.asset(widget.asset),
+                                ),
+                              )
+                            : Container(),
+                        const SizedBox(height: 20),
+                        TextField(
+                          keyboardType: widget.loginKeyboard,
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.person),
+                            hintText: widget.loginHintText,
+                            labelText: widget.loginLabelText ?? 'Login',
+                            errorText: showLoginErrorMessage
+                                ? widget.loginErrorMessage ?? ""
+                                : null,
+                          ),
+                          onChanged: (value) => setState(() => login = value),
+                        ),
+                        const SizedBox(height: 12.0),
+                        TextField(
+                          keyboardType: widget.passwordKeyboard,
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.lock_outline),
+                            hintText: widget.passwordHintText,
+                            labelText: widget.passwordLabelText ?? 'Password',
+                            errorText: showPasswordErrorMessage
+                                ? widget.passwordErrorMessage ?? ""
+                                : null,
+                          ),
+                          onChanged: (value) =>
+                              setState(() => password = value),
+                        ),
+                        const SizedBox(height: 4.0),
+                        widget.rememberOption
+                            ? Checkbox(
+                                value: remember,
+                                onChanged: (value) =>
+                                    setState(() => remember = value),
+                              )
+                            : Container(),
+                        const SizedBox(height: 8.0),
+                        showAuthenticationErrorMessage
+                            ? Text(
+                                widget.passwordErrorMessage ?? "",
+                                style: TextStyle(color: Colors.red),
+                              )
+                            : Container(),
+                        const SizedBox(height: 12.0),
+                        Center(
+                          child: RaisedButton(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.0),
+                            ),
+                            color: widget.buttonColor ?? Colors.blue,
+                            textColor: widget.buttonTextColor ?? Colors.white,
+                            child: widget.buttonContent ?? Text("Login"),
+                            onPressed: tryLogin,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12.0),
-                    TextField(
-                      keyboardType: widget.passwordKeyboard,
-                      decoration: InputDecoration(
-                        icon: Icon(Icons.person),
-                        hintText: widget.passwordHintText,
-                        labelText: widget.passwordLabelText ?? 'Login',
-                        errorText: showPasswordErrorMessage
-                            ? widget.passwordErrorMessage ?? ""
-                            : null,
-                      ),
-                      onChanged: (value) => setState(() => password = value),
-                    ),
-                    const SizedBox(height: 4.0),
-                    widget.rememberOption
-                        ? Checkbox(
-                            value: remember,
-                            onChanged: (value) =>
-                                setState(() => remember = value),
-                          )
-                        : Container(),
-                    const SizedBox(height: 8.0),
-                    showAuthenticationErrorMessage
-                        ? Text(
-                            widget.passwordErrorMessage ?? "",
-                            style: TextStyle(color: Colors.red),
-                          )
-                        : Container(),
-                    const SizedBox(height: 12.0),
-                    RaisedButton(
-                      child: widget.buttonContent ?? Text("Login"),
-                      onPressed: tryLogin,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -244,7 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
         result = await widget.authenticator(login, password);
 
         if (result)
-          Navigator.of(context).pushNamed(widget.nextRouteName);
+          Navigator.of(context).pushReplacementNamed(widget.nextRouteName);
         else
           setState(() => showAuthenticationErrorMessage = true);
       } else {
