@@ -3,6 +3,8 @@
 This package provides a simple Login Screen Template using parameters
 to customize the screen quickly and to authenticate users.
 
+[![Donate with Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=B8ST4MMXWBQJ8&currency_code=BRL&source=url)
+
 ## Usage 
 To use this package, add login_screen as a dependency in your pubspec.yaml file.
 
@@ -48,4 +50,4 @@ class MyApp extends StatelessWidget {
 ```
 
 ## Status
-This package is still in it's initial stages and help from other devs would be much appreciated.
+This package is in it's initial stages and PR requests are accepted if you like it.
