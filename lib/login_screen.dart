@@ -7,6 +7,8 @@ library login_screen;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:login_screen/src/login/login_form.dart';
+import 'package:login_screen/src/new_user/new_user_form.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({
@@ -21,31 +23,26 @@ class LoginScreen extends StatefulWidget {
     this.buttonContent,
     this.buttonColor,
     this.buttonTextColor,
-    @required this.nextRouteName,
+    @required this.nextRoute,
     this.loginLabelText,
     this.loginHintText,
     this.passwordLabelText,
     this.passwordHintText,
-    this.authenticationErrorMessage = "authentication failed.",
-    this.passwordErrorMessage = "password failed.",
-    this.loginErrorMessage = "login failed.",
     this.asset,
     this.rememberOption = false,
-    this.rememberCallback,
-    this.createAccount = false,
-    this.accountRouteName,
+    this.onRemember,
+    this.rememberText,
+    this.newUserOption = true,
+    this.newUserWidget,
     this.passwordVisibilityToggable = true,
     this.loginKeyboard = TextInputType.emailAddress,
     this.passwordKeyboard = TextInputType.visiblePassword,
-  })  : assert(background != null || backgroundColor != null),
-        assert(background == null || backgroundColor == null),
-        assert(authenticator != null),
-        assert(nextRouteName != null && nextRouteName.isNotEmpty),
-        assert(!createAccount ||
-            (createAccount &&
-                accountRouteName != null &&
-                accountRouteName.isNotEmpty)),
-        assert(!rememberOption || (rememberOption && rememberCallback != null)),
+    this.newUserText,
+    this.createUser,
+  })  : assert(authenticator != null),
+        assert(nextRoute != null && nextRoute.isNotEmpty),
+        assert(!newUserOption || (newUserOption && newUserWidget != null)),
+        assert(!rememberOption || (rememberOption && onRemember != null)),
         super(key: key);
 
 // UI Options
@@ -65,12 +62,13 @@ class LoginScreen extends StatefulWidget {
   /// Fade animation duration in milliseconds. Defaults to 450.
   final int duration;
 
-  /// If true, creates a link under the login button for account creation. Defaults to false
-  final bool createAccount;
+  /// If true, login screen will allow also show User Creation form in desktop or show a link button
+  /// under login form to change to User creation screen. Defaults to true.
+  final bool newUserOption;
 
   /// Whether to add a `Remember me` checkbox. Defaults to false.
   /// This is only a visual checkbox and the funcion should be provided in
-  /// [rememberCallback].
+  /// [onRemember].
   final bool rememberOption;
 
   /// An Image to show above the login fields.
@@ -85,8 +83,6 @@ class LoginScreen extends StatefulWidget {
   /// Button's textColor. Defaults to white.
   final Color buttonTextColor;
 
-// Fields' Options
-
   /// Login's field label text
   final String loginLabelText;
 
@@ -99,15 +95,20 @@ class LoginScreen extends StatefulWidget {
   /// Password's field hint text
   final String passwordHintText;
 
+  /// Text to show in remember checkbox. Defaults to 'Keep me logged in'
+  final String rememberText;
+
+  /// Text to be shown in Create New User button. This is only shown in
+  /// mobile screen.
+  final String newUserText;
+
+// Fields' Options
+
   /// Keyboard type for login field.
   final TextInputType loginKeyboard;
 
   /// Keyboard type for password field.
   final TextInputType passwordKeyboard;
-
-  final String authenticationErrorMessage;
-  final String passwordErrorMessage;
-  final String loginErrorMessage;
 
 // Callbacks
 
@@ -117,25 +118,31 @@ class LoginScreen extends StatefulWidget {
   /// Validator callback for login. Defaults to:
   ///   -  Must not be null or empty
   ///   -  Must be formatted like an email. (email@example.com)
-  final bool Function(String) loginValidator;
+  final String Function(String) loginValidator;
 
   /// Validator callback for password. Defaults to:
   ///   -  Length >= 6 And <= 20
   ///   -  Must contain at least 1 digit and 1 letter
-  final bool Function(String) passwordValidator;
+  final String Function(String) passwordValidator;
 
   /// Remember me Callback. Must be informed if [rememberOption] is true.
-  final void Function(bool) rememberCallback;
+  final FutureOr<void> Function(bool) onRemember;
+
+  /// Callback to create user. Receives a [String] login parameter and
+  /// [String] password parameter. If callback returns [true], it sign the
+  /// new user in automatically and move to the [nextRoute].
+  final FutureOr<bool> Function(String, String) createUser;
 
 // -- Routing Options  ------------------------------------------------------------------
 
   /// Next Route's name to be inserted in [Navigator.pushNamed(context, routeName)].
   /// Must not be null
-  final String nextRouteName;
+  final String nextRoute;
 
-  /// Route Name to use in [Navigator.pushNamed(context, routeName)].
-  /// Must be informed if [createAccount] is true.
-  final String accountRouteName;
+  /// Optional widget for newUserOption screen.
+  /// If newUserOption is [true] and newUserWidget is nor informed, the basic
+  /// template is used.
+  final Widget newUserWidget;
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -143,16 +150,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   double _opacity;
-  bool visible = false;
-
-  String login;
-  String password;
-
-  bool remember;
-
-  bool showAuthenticationErrorMessage = false;
-  bool showPasswordErrorMessage = false;
-  bool showLoginErrorMessage = false;
 
   @override
   void initState() {
@@ -166,9 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    showAuthenticationErrorMessage = false;
-    showPasswordErrorMessage = false;
-    showLoginErrorMessage = false;
+    var isMobile = MediaQuery.of(context).size.width <= 450;
 
     return Scaffold(
       backgroundColor: widget.backgroundColor,
@@ -179,7 +174,10 @@ class _LoginScreenState extends State<LoginScreen> {
             left: 0,
             bottom: 0,
             right: 0,
-            child: widget.background ?? Container(),
+            child: Hero(
+              tag: 'background',
+              child: widget.background ?? Container(),
+            ),
           ),
           Center(
             child: AnimatedOpacity(
@@ -195,79 +193,64 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(16.0),
                 ),
                 color: widget.cardColor,
-                child: Container(
-                  padding: const EdgeInsets.all(16.0),
-                  constraints: BoxConstraints(maxWidth: 550),
-                  child: SingleChildScrollView(
-                    child: Column(
+                child: Row(
+                  children: [
+                    Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        widget.asset != null
-                            ? ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: 216),
-                                child: FittedBox(
-                                  child: Image.asset(widget.asset),
-                                ),
-                              )
-                            : Container(),
-                        const SizedBox(height: 20),
-                        TextField(
-                          keyboardType: widget.loginKeyboard,
-                          decoration: InputDecoration(
-                            prefixIcon: Icon(Icons.person),
-                            hintText: widget.loginHintText,
-                            labelText: widget.loginLabelText ?? 'Login',
-                            errorText: showLoginErrorMessage
-                                ? widget.loginErrorMessage ?? ""
-                                : null,
-                          ),
-                          onChanged: (value) => setState(() => login = value),
+                        LoginForm(
+                          asset: widget.asset,
+                          buttonColor: widget.buttonColor,
+                          buttonContent: widget.buttonContent,
+                          buttonTextColor: widget.buttonTextColor,
+                          loginHintText: widget.loginHintText,
+                          loginKeyboard: widget.loginKeyboard,
+                          loginLabelText: widget.loginLabelText,
+                          passwordHintText: widget.passwordHintText,
+                          passwordKeyboard: widget.passwordKeyboard,
+                          passwordLabelText: widget.passwordLabelText,
+                          passwordVisibilityToggable:
+                              widget.passwordVisibilityToggable,
+                          rememberOption: widget.rememberOption,
+                          rememberText: widget.rememberText,
+                          tryLogin: tryLogin,
+                          loginValidator: widget.loginValidator,
+                          passwordValidator: widget.passwordValidator,
                         ),
-                        const SizedBox(height: 12.0),
-                        TextField(
-                          keyboardType: widget.passwordKeyboard,
-                          decoration: InputDecoration(
-                            prefixIcon: Icon(Icons.lock_outline),
-                            hintText: widget.passwordHintText,
-                            labelText: widget.passwordLabelText ?? 'Password',
-                            errorText: showPasswordErrorMessage
-                                ? widget.passwordErrorMessage ?? ""
-                                : null,
-                          ),
-                          onChanged: (value) =>
-                              setState(() => password = value),
-                        ),
-                        const SizedBox(height: 4.0),
-                        widget.rememberOption
-                            ? Checkbox(
-                                value: remember,
-                                onChanged: (value) =>
-                                    setState(() => remember = value),
-                              )
+                        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                        // Here goes other buttons
+                        // Other Auth services, like Google,Facebook, Instagram, etc.
+                        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                        widget.newUserOption && isMobile
+                            ? widget.newUserWidget ??
+                                FlatButton(
+                                  onPressed: goToNewUser,
+                                  child: Text(widget.newUserText ?? 'New User'),
+                                )
                             : Container(),
-                        const SizedBox(height: 8.0),
-                        showAuthenticationErrorMessage
-                            ? Text(
-                                widget.passwordErrorMessage ?? "",
-                                style: TextStyle(color: Colors.red),
-                              )
-                            : Container(),
-                        const SizedBox(height: 12.0),
-                        Center(
-                          child: RaisedButton(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.0),
-                            ),
-                            color: widget.buttonColor ?? Colors.blue,
-                            textColor: widget.buttonTextColor ?? Colors.white,
-                            child: widget.buttonContent ?? Text("Login"),
-                            onPressed: tryLogin,
-                          ),
-                        ),
                       ],
                     ),
-                  ),
+                    isMobile ? VerticalDivider() : const SizedBox(width: 0),
+                    isMobile
+                        ? NewUserForm(
+                            asset: widget.asset,
+                            buttonColor: widget.buttonColor,
+                            buttonContent: widget.buttonContent,
+                            buttonTextColor: widget.buttonTextColor,
+                            newUserHintText: widget.loginHintText,
+                            newUserKeyboard: widget.loginKeyboard,
+                            newUserLabelText: widget.loginLabelText,
+                            passwordHintText: widget.passwordHintText,
+                            passwordKeyboard: widget.passwordKeyboard,
+                            passwordLabelText: widget.passwordLabelText,
+                            passwordVisibilityToggable:
+                                widget.passwordVisibilityToggable,
+                            tryCreateUser: tryCreateUser,
+                            loginValidator: widget.loginValidator,
+                            passwordValidator: widget.passwordValidator,
+                          )
+                        : const SizedBox(width: 0),
+                  ],
                 ),
               ),
             ),
@@ -277,21 +260,52 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void tryLogin() async {
+  void goToNewUser() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => NewUserForm(
+          asset: widget.asset,
+          buttonColor: widget.buttonColor,
+          buttonContent: widget.buttonContent,
+          buttonTextColor: widget.buttonTextColor,
+          newUserHintText: widget.loginHintText,
+          newUserKeyboard: widget.loginKeyboard,
+          newUserLabelText: widget.loginLabelText,
+          passwordHintText: widget.passwordHintText,
+          passwordKeyboard: widget.passwordKeyboard,
+          passwordLabelText: widget.passwordLabelText,
+          passwordVisibilityToggable: widget.passwordVisibilityToggable,
+          tryCreateUser: tryCreateUser,
+          loginValidator: widget.loginValidator,
+          passwordValidator: widget.passwordValidator,
+        ),
+      ),
+    );
+  }
+
+  Future<void> tryCreateUser(String login, String password) async {
     var result = false;
+    result = await widget.createUser(login, password);
 
-    if (widget.loginValidator(login)) {
-      if (widget.passwordValidator(password)) {
-        result = await widget.authenticator(login, password);
+    if (result) {
+      await tryLogin(login, password);
+    }
+  }
 
-        if (result)
-          Navigator.of(context).pushReplacementNamed(widget.nextRouteName);
-        else
-          setState(() => showAuthenticationErrorMessage = true);
-      } else {
-        setState(() => showPasswordErrorMessage = true);
+  Future<void> tryLogin(
+    String login,
+    String password, [
+    bool remember = false,
+  ]) async {
+    var result = false;
+    result = await widget.authenticator(login, password);
+
+    if (result) {
+      if (widget.rememberOption ?? false) {
+        await widget.onRemember(remember);
       }
-      setState(() => showLoginErrorMessage = true);
+
+      Navigator.of(context).pushReplacementNamed(widget.nextRoute);
     }
   }
 }

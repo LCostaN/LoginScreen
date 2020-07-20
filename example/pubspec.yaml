@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  login_screen: ^0.5.0
+  login_screen: ^0.6.0
 
   cupertino_icons: ^0.1.3
 

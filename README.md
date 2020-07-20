@@ -6,6 +6,18 @@ to customize the screen quickly and to authenticate users.
 ## Usage 
 To use this package, add login_screen as a dependency in your pubspec.yaml file.
 
+Add LoginScreen as the widget for your login screen. LoginScreen's parameters
+allow for quick modifications to the base template.
+
+Among the parameters, there's some related to NewUserScreen, which complements
+the login screen. To avoid incresing the complexity of use, the template NewUser
+Screen will only ask for a login and password parameters.
+It's strongly recommended that you redirect your user in your app for any additional
+info necessary.
+
+If you don't feel like using the template provided, you can provide your own widget
+too.
+
 ### Example
 ```dart
 import 'package:flutter/material.dart';
